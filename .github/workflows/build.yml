@@ -1,0 +1,36 @@
+name: Build SH R APK
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare project
+        run: |
+          if [ -f shr.zip ]; then unzip -q -o shr.zip -d proj; echo "PROJ=proj" >> $GITHUB_ENV; else echo "PROJ=." >> $GITHUB_ENV; fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Build APK
+        working-directory: ${{ env.PROJ }}
+        run: gradle assembleDebug --no-daemon
+      - name: Collect APK
+        run: mkdir -p out && cp "${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk" out/SH-R.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SH-R-apk
+          path: out/SH-R.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: SH R (latest)
+          files: out/SH-R.apk
